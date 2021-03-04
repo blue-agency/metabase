@@ -31,7 +31,7 @@
                 :status :completed))
 
         ([metadata row]
-         (i/write-row! results-writer row (dec (vswap! row-count inc)))
+         (i/write-row! results-writer row (dec (vswap! row-count inc)) metadata)
          metadata)))))
 
 (defn- streaming-reducedf [results-writer ^OutputStream os]

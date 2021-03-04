@@ -108,7 +108,7 @@ export default class ParameterValueWidget extends Component {
 
   state = { isFocused: false };
 
-  UNSAFE_componentWillMount() {
+  componentDidMount() {
     // In public dashboards we receive field values before mounting this component and
     // without need to call `fetchFieldValues` separately
     if (_.isEmpty(this.props.values)) {
@@ -120,9 +120,9 @@ export default class ParameterValueWidget extends Component {
     return field_id ? [field_id] : field_ids;
   }
 
-  UNSAFE_componentWillReceiveProps(nextProps) {
-    if (!_.isEqual(this.fieldIds(this.props), this.fieldIds(nextProps))) {
-      this.updateFieldValues(nextProps);
+  componentDidUpdate(prevProps) {
+    if (!_.isEqual(this.fieldIds(this.props), this.fieldIds(prevProps))) {
+      this.updateFieldValues(this.props);
     }
   }
 

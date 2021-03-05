@@ -6,7 +6,8 @@
             [metabase.query-processor.streaming.interface :as i]
             [metabase.query-processor.streaming.json :as streaming.json]
             [metabase.query-processor.streaming.xlsx :as streaming.xlsx]
-            [metabase.util :as u])
+            [metabase.util :as u]
+            [metabase.util.visualization-settings :as viz])
   (:import clojure.core.async.impl.channels.ManyToManyChannel
            java.io.OutputStream
            metabase.async.streaming_response.StreamingResponse))
@@ -17,22 +18,27 @@
          streaming.json/keep-me
          streaming.xlsx/keep-me)
 
+(defn- indexed-col-vis-settings [{:keys [cols visualization_settings]}]
+  (vec (map (partial viz/make-format-overrides visualization_settings) cols)))
+
 (defn- streaming-rff [results-writer]
   (fn [initial-metadata]
-    (let [row-count (volatile! 0)]
+    (let [row-count    (volatile! 0)
+          viz-settings (indexed-col-vis-settings initial-metadata)]
       (fn
         ([]
-         (u/prog1 {:data initial-metadata}
+         (u/prog1 {:data (assoc initial-metadata :indexed-column-viz-settings viz-settings)}
            (i/begin! results-writer <>)))
 
         ([metadata]
          (assoc metadata
                 :row_count @row-count
-                :status :completed))
+                :status    :completed))
 
         ([metadata row]
-         (i/write-row! results-writer row (dec (vswap! row-count inc)) metadata)
-         metadata)))))
+         (let [md (assoc metadata :indexed-column-viz-settings viz-settings)]
+           (i/write-row! results-writer row (dec (vswap! row-count inc)) md)
+           metadata))))))
 
 (defn- streaming-reducedf [results-writer ^OutputStream os]
   (fn [_ final-metadata context]

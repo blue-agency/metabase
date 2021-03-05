@@ -659,7 +659,7 @@
   `(do-with-non-admin-groups-no-collection-perms
     (assoc collection/root-collection
            :namespace (name ~collection-namespace))
-    (fn [] ~@body) ))
+    (fn [] ~@body)))
 
 (defn doall-recursive
   "Like `doall`, but recursively calls doall on map values and nested sequences, giving you a fully non-lazy object.

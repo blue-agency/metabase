@@ -28,7 +28,7 @@
       (write-row! [_ row row-num _]
         (when-not (zero? row-num)
           (.write writer ",\n"))
-        (json/generate-stream (zipmap @col-names (map common/format-value row))
+        (json/generate-stream (zipmap @col-names (map #(common/format-value % nil) row))
                               writer)
         (.flush writer))
 

@@ -25,15 +25,20 @@
   [_ ^OutputStream os]
   (let [writer (BufferedWriter. (OutputStreamWriter. os StandardCharsets/UTF_8))]
     (reify i/StreamingResultsWriter
-      (begin! [_ {{:keys [cols visualization_settings]} :data}]
-        (csv/write-csv writer [(map (some-fn (partial viz/name-from-col-settings visualization_settings) :display_name :name) cols)])
+      (begin! [_ {{:keys [cols indexed-column-viz-settings]} :data}]
+        (letfn [(col-nm-fn [idx col]
+                  (if-some [col-title (:column_title (nth indexed-column-viz-settings idx))]
+                    col-title
+                    ((some-fn :display_name :name) col)))]
+          (csv/write-csv writer [(map-indexed col-nm-fn cols)]))
         (.flush writer))
 
-      (write-row! [_ row row-num {{:keys [cols visualization_settings]} :data}]
+      (write-row! [_ row row-num {{:keys [cols indexed-column-viz-settings]} :data}]
         (letfn [(fmt-row [idx val]
-                  (let [col     (nth cols idx)
-                        fmt-md  (format-metadata visualization_settings col)]
-                    (common/format-value val fmt-md)))]
+                  (let [fmt-fn (:format-fn (nth indexed-column-viz-settings idx))]
+                    (if (some? fmt-fn)
+                      (fmt-fn val)
+                      (common/format-value val nil))))]
           (csv/write-csv writer [(map-indexed fmt-row row)])
           (.flush writer)))
 

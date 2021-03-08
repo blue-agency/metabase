@@ -6,11 +6,16 @@
             [dk.ative.docjure.spreadsheet :as spreadsheet]
             [medley.core :as m]
             [metabase.async.streaming-response :as streaming-response]
+            [metabase.models.card :refer [Card]]
+            [metabase.models.field :refer [Field]]
+            [metabase.models.table :refer [Table]]
+            [metabase.models.card-test :as card-test]
             [metabase.query-processor :as qp]
             [metabase.query-processor.streaming :as qp.streaming]
             [metabase.test :as mt]
             [metabase.test.util :as tu]
-            [toucan.db :as db])
+            [toucan.db :as db]
+            [metabase.util :as u])
   (:import [java.io BufferedInputStream BufferedOutputStream ByteArrayInputStream ByteArrayOutputStream InputStream InputStreamReader]
            javax.servlet.AsyncContext))
 
@@ -148,3 +153,33 @@
           (let [[sql & args] (db/honeysql->sql {:select [["Cam 𝌆 Saul 💩" :cam]]})]
             (compare-results export-format (mt/native-query {:query  sql
                                                              :params args}))))))))
+
+(defn- make-col-settings [col-ref-to-settings]
+  (let [cs (reduce-kv (fn [acc k v]
+                        (assoc acc (json/generate-string k) v)) {} col-ref-to-settings)]
+    {:column_settings cs}))
+
+(deftest visualization-settings-in-export-test
+  (doseq [export-format [:csv]]
+    (testing export-format
+      (testing "A query with emoji and other fancy unicode"
+        (let [tbl-id (db/select-one-id Table :name "CHECKINS")
+              f1-id  (db/select-one-id Field :table_id tbl-id :name "ID")
+              f2-id  (db/select-one-id Field :table_id tbl-id :name "DATE")
+              cs-1   [:ref [:field f1-id nil]]
+              cs-2   [:ref [:field f2-id nil]]
+              cs-map {cs-1 {:column_title "Checkin ID"}
+                      cs-2 {:date_style   "YYYY/MM/D"
+                            :time_enabled "seconds"
+                            :time_style   "k:mm:ss"}}]
+          (mt/with-temp Card [card (card-test/card-with-source-table
+                                    (mt/id :checkins)
+                                    :visualization_settings
+                                    (make-col-settings cs-map))]
+            (let [card-id    (u/the-id card)
+                  query      (:dataset_query card)
+                  card-query (update-in query [:query :source-table] (constantly (str "card__" card-id)))]
+              (= [[]]
+                 (basic-actual-results* :csv card-query)))))))))
+
+

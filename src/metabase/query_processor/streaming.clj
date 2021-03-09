@@ -7,7 +7,8 @@
             [metabase.query-processor.streaming.json :as streaming.json]
             [metabase.query-processor.streaming.xlsx :as streaming.xlsx]
             [metabase.util :as u]
-            [metabase.util.visualization-settings :as viz])
+            [metabase.util.visualization-settings :as viz]
+            [medley.core :as m])
   (:import clojure.core.async.impl.channels.ManyToManyChannel
            java.io.OutputStream
            metabase.async.streaming_response.StreamingResponse))
@@ -31,9 +32,10 @@
            (i/begin! results-writer <>)))
 
         ([metadata]
-         (assoc metadata
-                :row_count @row-count
-                :status    :completed))
+         (-> metadata
+             (assoc :row_count @row-count
+                    :status    :completed)
+             (m/dissoc-in [:data :visualiation_settings] [:data :indexed-column-viz-settings])))
 
         ([metadata row]
          (let [md (assoc metadata :indexed-column-viz-settings viz-settings)]

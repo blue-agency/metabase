@@ -16,13 +16,26 @@
       (is (= "YYYY/MM/D k:mm"
              (viz/date-format-from-col-settings viz-settings col))))))
 
+(deftest momentjs-format-strings-test
+  (let [test-date (t/local-date-time 2021 3 3 14 39 27 876000000)]
+    (doseq [[expected date_style date_abbreviate time_style time_enabled]
+            [["Wednesday, March 3, 2021" "dddd, MMMM D, YYYY" false "h:mm A" nil]
+             ["Wed, Mar 3, 2021" "dddd, MMMM D, YYYY" true "h:mm A" nil]
+             ["Wednesday, March 3, 2021, 2:39 PM" "dddd, MMMM D, YYYY" false "h:mm A" "minutes"]
+             ["Wed, Mar 3, 2021, 2:39 PM" "dddd, MMMM D, YYYY" true "h:mm A" "minutes"]
+             ["Wed, Mar 3, 2021, 14:39:27:876" "dddd, MMMM D, YYYY" true "k:mm" "milliseconds"]]]
+      (testing (format "Formatting date results in \"%s\"" expected)
+        (let [col-setting {:date_style date_style :date_abbreviate date_abbreviate
+                           :time_style time_style :time_enabled time_enabled}]
+          (is (= expected
+                 ((viz/date-format-fn col-setting) test-date))))))))
 
 (deftest format-overrides-test
   (let [col-ref-id   "[\"ref\",[\"field\",143,null]]"
         col-ref-expr "[\"ref\",[\"expression\",\"CREATED_AT_MINUS_ONE_DAY\"]]"
         viz-settings {:column_settings {(keyword col-ref-id) {:column_title "Grand Total"}
                                         ;; TODO: figure out how to deal with the fact that "D" is day-of-year in Java
-                                        (keyword col-ref-expr) {:date_style   "YYYY/MM/D"
+                                        (keyword col-ref-expr) {:date_style   "YYYY/M/D"
                                                                 :time_enabled "minutes"
                                                                 :time_style   "k:mm"}}}
         id-col       {:description     "The total billed amount."
@@ -52,7 +65,7 @@
     (testing "correct format function for dates created for column"
       (let [overrides (viz/make-format-overrides viz-settings expr-col)]
         (is (contains? overrides :format-fn))
-        (is (= "2021/01/21 13:05" ((:format-fn overrides) test-date)))))
+        (is (= "2021/1/21, 13:05" ((:format-fn overrides) test-date)))))
     (testing ":column_title picked up for expression"
       (is (= {:column_title "Grand Total"}
              (viz/make-format-overrides viz-settings id-col))))))

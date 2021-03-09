@@ -49,8 +49,47 @@
   (or ((field-id-key col) column_settings)
       ((expression-key col) column_settings)))
 
-(defn- date-format-fn [{:keys [date_style time_style]}]
-  (let [fmt-str  (str date_style (if time_style (str " " time_style) ""))
+;;export type DateStyle =
+;  | "M/D/YYYY"
+;  | "D/M/YYYY"
+;  | "YYYY/M/D"
+;  | "MMMM D, YYYY"
+;  | "MMMM D, YYYY"
+;  | "D MMMM, YYYY"
+;  | "dddd, MMMM D, YYYY";
+;
+;export type TimeStyle = "h:mm A" | "k:mm" | "h A";
+
+;; see: https://github.com/MadMG/moment-jdateformatparser
+(defn momentjs-to-java-format
+  "Parameter names are deliberately chosen to match what the frontend sends."
+  [date_style date_abbreviate time_style time_enabled]
+  (let [dt-str (case date_style
+                 "M/D/YYYY" "M/d/YYYY"
+                 "D/M/YYYY" "d/M/YYYY"
+                 "YYYY/M/D" "YYYY/M/d"
+                 ;; Jan 7, 2018 or January 7, 2018
+                 "MMMM D, YYYY" (if date_abbreviate "MMM d YYYY" "MMMM d YYYY")
+                 ;; 7 Jan, 2018 or 7 January, 2018
+                 "D MMMM, YYYY" (if date_abbreviate "d MMM YYYY" "d MMMM YYYY")
+                 ;; Sun, Jan 7, 2018 or Sunday, January 7, 2018
+                 "dddd, MMMM D, YYYY" (if date_abbreviate "EEE, MMM d, YYYY" "EEEE, MMMM d, YYYY"))
+        sub-day  (case time_enabled
+                   nil            ""
+                   "minutes"      ""
+                   "seconds"      ":ss"
+                   "milliseconds" ":ss:SSS")
+        time-str (when (some? time_enabled)
+                   (case time_style
+                     nil      nil
+                     ;; 17:24 (with seconds/millis as per time-enabled)
+                     "k:mm"   (format "H:mm%s" sub-day)
+                     ;; 5:24 PM (with seconds/millis as per above)
+                     "h:mm A" (format "h:mm%s a" sub-day)))]
+    (format "%s%s" dt-str (if (some? time-str) (str ", " time-str) ""))))
+
+(defn date-format-fn [{:keys [date_style date_abbreviate time_style time_enabled]}]
+  (let [fmt-str   (momentjs-to-java-format date_style date_abbreviate time_style time_enabled)
         formatter (DateTimeFormatter/ofPattern fmt-str)]
     #(.format formatter %)))
 

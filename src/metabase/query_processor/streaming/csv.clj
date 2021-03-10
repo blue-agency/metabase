@@ -16,11 +16,6 @@
                                                              (u.date/format (t/zoned-date-time)))}
    :write-keepalive-newlines? false})
 
-(defn- format-metadata [visualization-settings col]
-  (if-let [date-fmt-str (viz/date-format-from-col-settings visualization-settings col)]
-    {:date-format-str date-fmt-str}
-    nil))
-
 (defmethod i/streaming-results-writer :csv
   [_ ^OutputStream os]
   (let [writer (BufferedWriter. (OutputStreamWriter. os StandardCharsets/UTF_8))]
@@ -33,7 +28,7 @@
           (csv/write-csv writer [(map-indexed col-nm-fn cols)]))
         (.flush writer))
 
-      (write-row! [_ row row-num {{:keys [cols indexed-column-viz-settings]} :data}]
+      (write-row! [_ row _ {{:keys [cols indexed-column-viz-settings]} :data}]
         (letfn [(fmt-row [idx val]
                   (let [fmt-fn (:format-fn (nth indexed-column-viz-settings idx))]
                     (if (some? fmt-fn)

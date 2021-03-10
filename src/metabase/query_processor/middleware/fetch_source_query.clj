@@ -274,17 +274,16 @@
           (qp query rff context))
         (qp query rff context)))))
 
-(defn add-visualization-settings
-  "Middleware that adds visualization settings."
+(defn add-card-visualization-settings
+  "Middleware that adds visualization settings for cards."
   [qp]
   (fn [query rff context]
-    (let [info    (:info query)
-          card-id (:card-id info)]
-      (qp query
-          (fn [metadata]
-            (rff (assoc metadata
-                        :visualization_settings
-                        (-> (db/select-one-field :visualization_settings Card :id card-id)
-                            (mi/normalize-visualization-settings)))))
-          context))))
-
+    (if-let [card-id (:card-id (:info query))]
+      (qp
+       query
+       (fn [metadata]
+         (rff (assoc metadata :visualization_settings
+                     (-> (db/select-one-field :visualization_settings Card :id card-id)
+                         (mi/normalize-visualization-settings)))))
+       context)
+      (qp query rff context))))

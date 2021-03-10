@@ -35,7 +35,7 @@
          (-> metadata
              (assoc :row_count @row-count
                     :status    :completed)
-             (m/dissoc-in [:data :visualiation_settings] [:data :indexed-column-viz-settings])))
+             (m/dissoc-in [:data :visualization_settings] [:data :indexed-column-viz-settings])))
 
         ([metadata row]
          (let [md (assoc metadata :indexed-column-viz-settings viz-settings)]

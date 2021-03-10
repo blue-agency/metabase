@@ -69,4 +69,3 @@
     (testing ":column_title picked up for expression"
       (is (= {:column_title "Grand Total"}
              (viz/make-format-overrides viz-settings id-col))))))
-

@@ -142,6 +142,6 @@
     (if skip-results-metadata?
       (qp query rff context)
       (let [record! (partial record-metadata! query)
-            rff' (fn [metadata]
-                   (insights-xform metadata record! (rff metadata)))]
-        (qp query rff' context)))))
+            rff (fn [metadata]
+                  (insights-xform metadata record! (rff metadata)))]
+        (qp query rff context)))))

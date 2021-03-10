@@ -1,8 +1,10 @@
 (ns metabase.util.visualization-settings
   "Utility functions for dealing with visualization settings on the backend."
   (:require [schema.core :as s]
-            [metabase.util.schema :as su])
-  (:import (java.time.format DateTimeFormatter)))
+            [metabase.util.schema :as su]
+            [metabase.query-processor.streaming.common :as common])
+  (:import (java.time.format DateTimeFormatter)
+           (java.time.temporal TemporalAccessor)))
 
 ;; a column map can look like any of these
 ;; from an export test
@@ -93,11 +95,48 @@
         formatter (DateTimeFormatter/ofPattern fmt-str)]
     #(.format formatter %)))
 
-(defn make-format-overrides [visualization-settings col]
-  (if-some [col-settings (find-col-setting visualization-settings col)]
-    (-> (select-keys col-settings [:column_title])
-        ;; TODO: check that the column type is actually a Date here as well?
-        (cond-> (:date_style col-settings) (assoc :format-fn (date-format-fn col-settings))))))
+(defn number-format-fn [{:keys [decimals number_separators number_style prefix suffix]}]
+  ;; TODO: fill in actual impl
+  ;; decimals is the number of decimal digits to show
+  ;; number_separators is a two-char string; the first char is the decimal point character and the second is the thousands separator
+  ;; number_style is either "decimal" "percent" "scientific" or "currency"
+  ;; prefix and suffix are just strings to prepend and append, respectively
+  common/format-value)
+
+(defn- always-dispatch-on-first-val-pred
+  "Returns a stateful function of a single `arg` that will invoke `(fn-if arg)` when `(pred arg)` returns true, and
+  `(fn-else arg)` otherwise. Only the first `arg` value ever passed to this `fn` is checked against the predicate `fn`;
+  all subsequent values passed for `arg` to the returned `fn` are assumed to also satisfy the predicate. This is a
+  reasonable assumption for certain scenarios, such as subsequent rows, at the same column position, from a single JDBC
+  `ResultSet`"
+  [pred fn-if fn-else]
+  (let [res (atom nil)]
+    (fn [val]
+      (if (nil? @res)
+        ;; predicate never checked; call it now
+        (reset! res (pred val)))
+      (if @res (fn-if val) (fn-else val)))))
+
+(defn- fmt-fn-or-default
+  "Returns a function that will call fmt-fn if pred is true for the first value passed, else will call the
+  common/format-value protocol fn."
+  [pred fmt-fn]
+  (always-dispatch-on-first-val-pred pred fmt-fn common/format-value))
+
+(defn make-format-metadata [visualization-settings col]
+  ;; always provide a default format fn
+  (let [fmt-md {:format-fn common/format-value}]
+    (if-some [col-settings (find-col-setting visualization-settings col)]
+      (let [number-keys (select-keys col-settings [:decimals :number_separator :number_style])]
+        (-> (merge col-settings fmt-md) ; merge in col-settings with our format metadata
+            ;; if a date_style exists, add a date specific format fn
+            (cond-> (:date_style col-settings) (assoc :format-fn (fmt-fn-or-default
+                                                                  #(instance? TemporalAccessor %)
+                                                                  (date-format-fn col-settings))))
+            (cond-> (not-empty number-keys) (assoc :format-fn (fmt-fn-or-default
+                                                               #(instance? Number %)
+                                                               (number-format-fn col-settings))))))
+      fmt-md)))
 
 (s/defn col-settings-key
   "Gets the key that would be mapped under :column_settings for the given col (a Column domain object)."

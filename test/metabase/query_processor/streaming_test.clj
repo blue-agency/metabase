@@ -163,12 +163,12 @@
   ;; TODO: expand to the other formats here
   (doseq [export-format [:csv]]
     (testing export-format
-      (testing "A query with emoji and other fancy unicode"
+      (testing "A CSV export takes into account custom visualization settings"
         (let [tbl-id (db/select-one-id Table :name "CHECKINS")
-              f1-id (db/select-one-id Field :table_id tbl-id :name "ID")
-              f2-id (db/select-one-id Field :table_id tbl-id :name "DATE")
-              cs-1 [:ref [:field f1-id nil]]
-              cs-2 [:ref [:field f2-id nil]]
+              f1-id  (db/select-one-id Field :table_id tbl-id :name "ID")
+              f2-id  (db/select-one-id Field :table_id tbl-id :name "DATE")
+              cs-1   [:ref [:field f1-id nil]]
+              cs-2   [:ref [:field f2-id nil]]
               cs-map {cs-1 {:column_title "Checkin ID"}
                       cs-2 {:date_style      "YYYY/M/D"
                             :date_abbreviate true
@@ -179,13 +179,13 @@
                                     :visualization_settings
                                     (make-col-settings cs-map))]
 
-                             (let [card-id (u/the-id card)
-                                   ds-query (:dataset_query card)
+                             (let [card-id     (u/the-id card)
+                                   ds-query    (:dataset_query card)
                                    inner-query (assoc (:query ds-query) :source-table (str "card__" card-id)
                                                                         :limit 1
                                                                         :order-by [[:asc [:field f1-id]]])
-                                   card-query (assoc ds-query :query inner-query
-                                                              :middleware {:format-rows? false})]
+                                   card-query  (assoc ds-query :query inner-query
+                                                               :middleware {:format-rows? false})]
                                ;; the :column_title and the :date*/:time* viz settings should have been used to generate export
                                (is (= [["Checkin ID" "Date" "User ID" "Venue ID"]
                                        ["1" "2014/4/7" "5" "12"]]

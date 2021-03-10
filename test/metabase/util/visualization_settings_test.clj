@@ -61,11 +61,18 @@
                       :expression_name "CREATED_AT_MINUS_ONE_DAY",
                       :field_ref       [:expression "CREATED_AT_MINUS_ONE_DAY"],
                       :source          :fields}
-        test-date    (t/local-date-time 2021 1 21 13 5)]
+        test-date    (t/local-date-time 2021 1 21 13 5)
+        test-total   124.43]
     (testing "correct format function for dates created for column"
-      (let [overrides (viz/make-format-overrides viz-settings expr-col)]
-        (is (contains? overrides :format-fn))
-        (is (= "2021/1/21, 13:05" ((:format-fn overrides) test-date)))))
+      (let [fmt-md-expr (viz/make-format-metadata viz-settings expr-col)
+            fmt-md-id (viz/make-format-metadata viz-settings id-col)]
+        ;; format fn should be defined in both cases
+        (is (contains? fmt-md-expr :format-fn))
+        (is (contains? fmt-md-id :format-fn))
+        ;; format fn for the expr column should work based on the viz settings
+        (is (= "2021/1/21, 13:05" ((:format-fn fmt-md-expr) test-date)))
+        ;; format fn for the id column should use a default impl from protocol fn
+        (is (= test-total ((:format-fn fmt-md-id) test-total)))))
     (testing ":column_title picked up for expression"
       (is (= {:column_title "Grand Total"}
-             (viz/make-format-overrides viz-settings id-col))))))
+             (select-keys (viz/make-format-metadata viz-settings id-col) [:column_title]))))))

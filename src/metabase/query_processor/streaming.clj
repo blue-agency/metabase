@@ -20,7 +20,7 @@
          streaming.xlsx/keep-me)
 
 (defn- indexed-col-vis-settings [{:keys [cols visualization_settings]}]
-  (vec (map (partial viz/make-format-overrides visualization_settings) cols)))
+  (vec (map (partial viz/make-format-metadata visualization_settings) cols)))
 
 (defn- streaming-rff [results-writer]
   (fn [initial-metadata]

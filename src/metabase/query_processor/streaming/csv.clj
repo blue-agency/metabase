@@ -31,9 +31,7 @@
       (write-row! [_ row _ {{:keys [cols indexed-column-viz-settings]} :data}]
         (letfn [(fmt-row [idx val]
                   (let [fmt-fn (:format-fn (nth indexed-column-viz-settings idx))]
-                    (if (some? fmt-fn)
-                      (fmt-fn val)
-                      (common/format-value val))))]
+                    (fmt-fn val)))]
           (csv/write-csv writer [(map-indexed fmt-row row)])
           (.flush writer)))
 

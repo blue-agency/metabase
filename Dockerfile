@@ -62,7 +62,7 @@ WORKDIR /app
 ENV FC_LANG en-US LC_CTYPE en_US.UTF-8
 
 # dependencies
-RUN apk -U upgrade && apk add --no-cache bash ttf-dejavu fontconfig
+RUN apk -U upgrade && apk add --no-cache bash ttf-dejavu fontconfig font-noto-cjk
 
 # add fixed cacerts
 COPY --from=builder /etc/ssl/certs/java/cacerts /opt/java/openjdk/lib/security/cacerts
